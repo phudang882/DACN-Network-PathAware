@@ -1,3 +1,19 @@
+#!/bin/bash
+################################################################################
+# Script for installing Postgres on Ubuntu 16.04, 18.04, 20.04 and 22.04 (could be used for other version too)
+# Author: Phu Dang Kim
+#-------------------------------------------------------------------------------
+# This script will install Postgres on your Ubuntu server.
+# Seperate Odoo server and Database PostgreSQL server and Nginx server.
+#-------------------------------------------------------------------------------
+# Make a new file:
+# sudo nano db-install.sh
+# Place this content in it and then make the file executable:
+# sudo chmod +x db-install.sh
+# Execute the script to install Odoo:
+# ./db-install
+################################################################################
+
 #--------------------------------------------------
 # Install PostgreSQL Server
 #--------------------------------------------------
@@ -16,7 +32,9 @@ else
     sudo apt-get install postgresql postgresql-server-dev-all -y
 fi
 
-
+#--------------------------------------------------
+# Creat User For Odoo
+#--------------------------------------------------
 echo -e "\n---- Creating the ODOO PostgreSQL User  ----"
 sudo su - postgres -c "createuser -s $OE_USER" 2> /dev/null || true
 sudo su - postgres -c "psql -c \"ALTER USER $OE_USER WITH PASSWORD '$PASSWORD';\"" 2> /dev/null || true

@@ -4,7 +4,7 @@
 # Author: Yenthe Van Ginneken
 # Author: Phu Dang Kim
 #-------------------------------------------------------------------------------
-# This script will install Odoo on your Ubuntu server (use python venv). It can install multiple Odoo instances
+# This script will install Odoo on your Ubuntu server (use python virtualenv). It can install multiple Odoo instances
 # in one Ubuntu because of the different xmlrpc_ports
 # Seperate Odoo server and Database PostgreSQL server and Nginx server.
 #-------------------------------------------------------------------------------
@@ -33,8 +33,6 @@ OE_PORT="8069"
 OE_VERSION="17.0"
 # Set this to True if you want to install the Odoo enterprise version!
 IS_ENTERPRISE="False"
-# Installs postgreSQL V14 instead of defaults (e.g V12 for Ubuntu 20/22) - this improves performance
-INSTALL_POSTGRESQL_FOURTEEN="True"
 # Set this to True if you want to install Nginx!
 INSTALL_NGINX="False"
 # Set this to True if odoo behind a Nginx server
@@ -45,14 +43,11 @@ OE_SUPERADMIN="tx55-6b8r-wq8p"
 GENERATE_RANDOM_PASSWORD="False"
 
 OE_CONFIG="${OE_USER}-server"
-# Set the website name
-WEBSITE_NAME="_"
-# Set the default Odoo longpolling port
+# Set the default Odoo longpolling port (you still have to use -c /etc/odoo-server.conf for example to use this.)
 LONGPOLLING_PORT="8072"
-# Set to "True" to install certbot and have ssl enabled, "False" to use http
-ENABLE_SSL="False"
-# Provide Email to register ssl certificate
-ADMIN_EMAIL="odoo@example.com"
+# Set dbfilter for multiple odoo instances
+DBFILTER="_"
+
 
 ##
 ###  WKHTMLTOPDF download links
@@ -87,7 +82,7 @@ sudo apt-get install libpq-dev
 #--------------------------------------------------
 # Install Dependencies
 #--------------------------------------------------
-echo -e "\n--- Installing Python 3 + pip3 --"
+echo -e "\n--- Installing Python 3 + pip3 + git --"
 sudo apt-get install python3 python3-pip
 sudo apt-get install git python3-cffi build-essential wget python3-dev python3-venv python3-wheel libxslt-dev libzip-dev libldap2-dev libsasl2-dev python3-setuptools node-less libpng-dev libjpeg-dev gdebi -y
 
@@ -155,7 +150,7 @@ sudo chown -R $OE_USER:$OE_USER $OE_HOME/*
 
 
 #--------------------------------------------------
-# Creat file Config ODOO
+# Creat file Config ODOO (you still have to use -c /etc/odoo-server.conf)
 #--------------------------------------------------
 echo -e "* Create server config file"
 
@@ -169,25 +164,33 @@ if [ $GENERATE_RANDOM_PASSWORD = "True" ]; then
     echo -e "* Generating random admin password"
     OE_SUPERADMIN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
 fi
+# Setting admin pasword
 sudo su root -c "printf 'admin_passwd = ${OE_SUPERADMIN}\n' >> /etc/${OE_CONFIG}.conf"
-
+# Setting port
 if [ $OE_VERSION > "11.0" ];then
     sudo su root -c "printf 'http_port = ${OE_PORT}\n' >> /etc/${OE_CONFIG}.conf"
 else
     sudo su root -c "printf 'xmlrpc_port = ${OE_PORT}\n' >> /etc/${OE_CONFIG}.conf"
 fi
+# Setting logfile
 sudo su root -c "printf 'logfile = /var/log/${OE_USER}/${OE_CONFIG}.log\n' >> /etc/${OE_CONFIG}.conf"
-
+# Setting addons_path for custom addons
 if [ $IS_ENTERPRISE = "True" ]; then
     sudo su root -c "printf 'addons_path=${OE_HOME}/enterprise/addons,${OE_HOME_EXT}/addons\n' >> /etc/${OE_CONFIG}.conf"
 else
     sudo su root -c "printf 'addons_path=${OE_HOME_EXT}/addons,${OE_HOME}/custom/addons\n' >> /etc/${OE_CONFIG}.conf"
 fi
+
+# Setting proxy_mode
 if [  $PROXY_MODE = "True" ]; then
     sudo su root -c "echo 'proxy_mode = 1' >> /etc/${OE_CONFIG}.conf"
     echo -e "* Rest of ${OE_CONFIG}.conf"
-	
 fi
+# Setting dbfilter
+if [ $DBFILTER != "_" ]; then
+    sudo su root -c "printf 'dbfilter = ${DBFILTER}\n' >> /etc/${OE_CONFIG}.conf"
+fi
+
 sudo chown $OE_USER:$OE_USER /etc/${OE_CONFIG}.conf
 sudo chmod 640 /etc/${OE_CONFIG}.conf
 
@@ -200,10 +203,9 @@ sudo su root -c "echo 'sudo -u $OE_USER $OE_HOME_EXT/odoo-bin --config=/etc/${OE
 sudo chmod 755 $OE_HOME_EXT/start.sh
 
 #--------------------------------------------------
-#  Creating VirtualEnv 
+#  Creat VirtualEnv 
 #--------------------------------------------------
-
-# Creat folder python venv
+echo -e "\n---- Create Virtual Environment ----"
 cd $OE_HOME_EXT
 sudo python3 -m venv $OE_VIRTENV
 source $OE_HOME_EXT/$OE_VIRTENV/bin/activate

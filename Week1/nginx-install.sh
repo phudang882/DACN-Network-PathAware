@@ -1,19 +1,41 @@
+#!/bin/bash
+################################################################################
+# Script for installing NGINX on Ubuntu 16.04, 18.04, 20.04 and 22.04 (could be used for other version too)
+# Author: Phu Dang Kim
+#-------------------------------------------------------------------------------
+# This script will install NGINX on your Ubuntu server.
+# Seperate Odoo server and Database PostgreSQL server and Nginx server.
+#-------------------------------------------------------------------------------
+# Make a new file:
+# sudo nano nginx-install.sh
+# Place this content in it and then make the file executable:
+# sudo chmod +x nginx-install.sh
+# Execute the script to install Odoo:
+# ./nginx-install
+################################################################################
 #--------------------------------------------------
 # Install Nginx if needed
 #--------------------------------------------------
-INSTALL_NGINX="True"
+# Odoo server IP
 OE_IP="10.0.2.4"
+# Odoo server port
 OE_PORT="8069"
+# Odoo server port longpolling
 LONGPOLLING_PORT="8072"
+# Set to "True" to install certbot and have ssl enabled, "False" to use http
 ENABLE_SSL="False"
-
-WEBSITE_NAME="_"
+# Provide Email to register ssl certificate
 ADMIN_EMAIL="odoo@example.com"
+# Set the website name
+WEBSITE_NAME="_"
 
-if [ $INSTALL_NGINX = "True" ]; then
-  echo -e "\n---- Installing and setting up Nginx ----"
-  sudo apt install nginx -y
-  cat <<EOF > ~/odoo
+echo -e "\n---- Installing and setting up Nginx ----"
+sudo apt install nginx -y
+#--------------------------------------------------
+# Configure Nginx for Odoo
+#--------------------------------------------------
+echo -e "\n---- Setting up Nginx ----"
+cat <<EOF > ~/odoo
 server {
   listen 80;
 
@@ -88,15 +110,13 @@ server {
 }
 EOF
 
-  sudo mv ~/odoo /etc/nginx/sites-available/$WEBSITE_NAME
-  sudo ln -s /etc/nginx/sites-available/$WEBSITE_NAME /etc/nginx/sites-enabled/$WEBSITE_NAME
-  sudo rm /etc/nginx/sites-enabled/default
-  sudo service nginx reload
-  sudo su root -c "printf 'proxy_mode = True\n' >> /etc/${OE_CONFIG}.conf"
-  echo "Done! The Nginx server is up and running. Configuration can be found at /etc/nginx/sites-available/$WEBSITE_NAME"
-else
-  echo "Nginx isn't installed due to choice of the user!"
-fi
+
+sudo mv ~/odoo /etc/nginx/sites-available/$WEBSITE_NAME
+sudo ln -s /etc/nginx/sites-available/$WEBSITE_NAME /etc/nginx/sites-enabled/$WEBSITE_NAME
+sudo rm /etc/nginx/sites-enabled/default
+sudo service nginx reload
+sudo su root -c "printf 'proxy_mode = True\n' >> /etc/${OE_CONFIG}.conf"
+echo "Done! The Nginx server is up and running. Configuration can be found at /etc/nginx/sites-available/$WEBSITE_NAME"
 
 
 #--------------------------------------------------
